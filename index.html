@@ -59,8 +59,11 @@
     <button id="submitBtn">SUBMIT</button>
 </div>
 
+<!--Archivo con las palabras para adivinar -->
+<script src="palabras.js"></script>
+
 <script>
-const palabraSolucion = "GHOST";
+const palabraSolucion = LISTA_PALABRAS[Math.floor(Math.random() * LISTA_PALABRAS.length)];
 const maxIntentos = 6;
 const longitud = palabraSolucion.length;
 
