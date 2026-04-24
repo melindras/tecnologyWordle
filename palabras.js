@@ -1,8 +1,18 @@
-// Lista de palabras (todas de la misma longitud)
-const LISTA_PALABRAS = [
-    "GHOST",
-    "DOG",
-    "TWO",
-    "ONE",
-    "LED"
-];
+// Lista de palabras (ESCRIBE EN MAYÚSCULAS)
+const LISTAS_PALABRAS = {
+    electricidad: [
+        "SWITCH",
+        "LED",
+        "BATTERY"
+    ],
+    dibujo: [
+        "DRAFT",
+        "ELEVATION",
+        "DRAWING"
+    ],
+    materiales: [
+        "STEEL",
+        "IRON",
+        "FOUNDATION"
+    ]
+};
