@@ -130,10 +130,13 @@ function obtenerPalabraAleatoria(categoria) {
     return lista[Math.floor(Math.random() * lista.length)];
 }
 
-
+function nuevaPalabra() {
+    palabraSolucion = obtenerPalabraAleatoria(categoriaActual);
+    longitud = palabraSolucion.length;
+}
 
 const maxIntentos = 6;
-const longitud = palabraSolucion.length;
+let longitud;
 
 let intentoActual = 0;
 let indiceSeleccionado = 0;
@@ -144,6 +147,8 @@ const boardElement = document.getElementById("game-board");
 const messageDisplay = document.getElementById("message");
 
 function initBoard() {
+    boardElement.innerHTML = ""; //  limpiar tablero
+
     boardElement.style.gridTemplateColumns = `repeat(${longitud}, 1fr)`;
 
     for (let i = 0; i < maxIntentos; i++) {
@@ -155,6 +160,7 @@ function initBoard() {
             boardElement.appendChild(tile);
         }
     }
+
     actualizarFocoVisual();
 }
 
@@ -365,29 +371,26 @@ document.getElementById("categoria").addEventListener("change", () => {
 });
 
 function reiniciarJuego() {
+    nuevaPalabra(); // 🔴 importante
+
     intentoActual = 0;
     indiceSeleccionado = 0;
     juegoTerminado = false;
+
     tablero = Array.from({ length: maxIntentos }, () => Array(longitud).fill(""));
+
     messageDisplay.textContent = "";
 
-    // Limpiar tablero visual
-    for (let i = 0; i < maxIntentos; i++) {
-        for (let j = 0; j < longitud; j++) {
-            const tile = document.getElementById(`tile-${i}-${j}`);
-            tile.textContent = "";
-            tile.classList.remove("correct", "present", "absent");
-        }
-    }
+    initBoard(); // 🔴 reconstruye grid
 
     // Reset teclado
+    estadoTeclas = {};
     document.querySelectorAll("#keyboard button").forEach(btn => {
         btn.classList.remove("correct", "present", "absent");
     });
-
-    actualizarFocoVisual();
 }
-
+nuevaPalabra();
+tablero = Array.from({ length: maxIntentos }, () => Array(longitud).fill(""));
 initBoard();
 crearTeclado();
 </script>
