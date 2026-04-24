@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<head>
+<meta charset="UTF-8">
+<style>
+#wordle-game-wrapper {
+    --color-correct: #6aaa64;
+    --color-present: #c9b458;
+    --color-absent: #3a3a3c;
+    --color-border: #3a3a3c;
+    --color-selected: #ffffff;
+    --color-bg: #121213;
+
+    background-color: var(--color-bg);
+    color: white;
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+#game-board {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.tile {
+    width: 58px;
+    height: 58px;
+    border: 2px solid var(--color-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.tile.selected {
+    border-color: var(--color-selected);
+}
+
+.tile.correct { background-color: var(--color-correct); }
+.tile.present { background-color: var(--color-present); }
+.tile.absent { background-color: var(--color-absent); }
+
+#message {
+    height: 30px;
+    margin-top: 10px;
+}
+</style>
+</head>
+<div id="wordle-game-wrapper">
+    <h1>TECNO-WORDLE</h1>
+    <div id="game-board"></div>
+    <div id="message"></div>
+    <button id="submitBtn">SUBMIT</button>
+</div>
+
+<script>
+const palabraSolucion = "GHOST";
+const maxIntentos = 6;
+const longitud = palabraSolucion.length;
+
+let intentoActual = 0;
+let indiceSeleccionado = 0;
+let tablero = Array.from({ length: maxIntentos }, () => Array(longitud).fill(""));
+let juegoTerminado = false;
+
+const boardElement = document.getElementById("game-board");
+const messageDisplay = document.getElementById("message");
+
+function initBoard() {
+    boardElement.style.gridTemplateColumns = `repeat(${longitud}, 1fr)`;
+
+    for (let i = 0; i < maxIntentos; i++) {
+        for (let j = 0; j < longitud; j++) {
+            const tile = document.createElement("div");
+            tile.className = "tile";
+            tile.id = `tile-${i}-${j}`;
+            tile.addEventListener("click", () => seleccionarCelda(i, j));
+            boardElement.appendChild(tile);
+        }
+    }
+    actualizarFocoVisual();
+}
+
+function seleccionarCelda(fila, columna) {
+    if (juegoTerminado || fila !== intentoActual) return;
+    indiceSeleccionado = columna;
+    actualizarFocoVisual();
+}
+
+function actualizarFocoVisual() {
+    document.querySelectorAll(".tile").forEach(t => {
+        t.classList.remove("selected");
+    });
+
+    const tile = document.getElementById(`tile-${intentoActual}-${indiceSeleccionado}`);
+    if (tile) tile.classList.add("selected");
+}
+
+function renderizarFila() {
+    for (let j = 0; j < longitud; j++) {
+        const tile = document.getElementById(`tile-${intentoActual}-${j}`);
+        tile.textContent = tablero[intentoActual][j];
+    }
+    actualizarFocoVisual();
+}
+
+async function esPalabraValida(palabra) {
+    try {
+        const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${palabra}`);
+        return res.ok;
+    } catch {
+        return true;
+    }
+}
+
+document.addEventListener("keydown", (e) => {
+    if (juegoTerminado) return;
+
+    if (e.key === "Backspace") {
+        tablero[intentoActual][indiceSeleccionado] = "";
+        if (indiceSeleccionado > 0) indiceSeleccionado--;
+        renderizarFila();
+    } 
+    else if (e.key === "ArrowLeft") {
+        if (indiceSeleccionado > 0) indiceSeleccionado--;
+        actualizarFocoVisual();
+    } 
+    else if (e.key === "ArrowRight") {
+        if (indiceSeleccionado < longitud - 1) indiceSeleccionado++;
+        actualizarFocoVisual();
+    } 
+    else if (/^[a-zA-Z]$/.test(e.key)) {
+        tablero[intentoActual][indiceSeleccionado] = e.key.toUpperCase();
+        if (indiceSeleccionado < longitud - 1) indiceSeleccionado++;
+        renderizarFila();
+    }
+});
+
+document.getElementById("submitBtn").addEventListener("click", validarYEnviar);
+
+async function validarYEnviar() {
+    const intento = tablero[intentoActual].join("");
+	
+	if (tablero[intentoActual].includes("")) {
+		messageDisplay.textContent = "Not enough letters";
+		return;
+	}
+    
+
+    const valida = await esPalabraValida(intento.toLowerCase());
+    if (!valida) {
+        messageDisplay.textContent = "Not in word list";
+        return;
+    }
+
+    procesarResultado(intento);
+}
+
+function procesarResultado(intento) {
+    let temp = palabraSolucion.split("");
+    let feedback = Array(longitud).fill("absent");
+
+    for (let i = 0; i < longitud; i++) {
+        if (intento[i] === palabraSolucion[i]) {
+            feedback[i] = "correct";
+            temp[i] = null;
+        }
+    }
+
+    for (let i = 0; i < longitud; i++) {
+        if (feedback[i] === "absent" && temp.includes(intento[i])) {
+            feedback[i] = "present";
+            temp[temp.indexOf(intento[i])] = null;
+        }
+    }
+
+    for (let i = 0; i < longitud; i++) {
+        const tile = document.getElementById(`tile-${intentoActual}-${i}`);
+        tile.classList.add(feedback[i]);
+    }
+
+    if (intento === palabraSolucion) {
+        messageDisplay.textContent = "¡Correcto!";
+        juegoTerminado = true;
+    } else if (intentoActual === maxIntentos - 1) {
+        messageDisplay.textContent = `Era: ${palabraSolucion}`;
+        juegoTerminado = true;
+    } else {
+        intentoActual++;
+        indiceSeleccionado = 0;
+        messageDisplay.textContent = "";
+        actualizarFocoVisual();
+    }
+}
+
+initBoard();
+</script>
