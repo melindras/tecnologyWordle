@@ -24,6 +24,7 @@
     display: grid;
     gap: 8px;
     margin-bottom: 20px;
+	float: right;
 }
 
 .tile {
@@ -50,20 +51,87 @@
     height: 30px;
     margin-top: 10px;
 }
+
+#keyboard {
+    margin-top: 20px;
+}
+
+#keyboard div {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 5px;
+}
+
+#keyboard button {
+    margin: 2px;
+    padding: 10px;
+    font-size: 14px;
+    border: none;
+    background-color: #818384;
+    color: white;
+    border-radius: 4px;
+}
+
+/* Colores Wordle */
+#keyboard button.correct {
+    background-color: #6aaa64;
+}
+
+#keyboard button.present {
+    background-color: #c9b458;
+}
+
+#keyboard button.absent {
+    background-color: #3a3a3c;
+}
+
+#menu-container {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+}
+
+#categoria {
+    padding: 5px;
+    font-size: 14px;
+}
+
+
 </style>
 </head>
 <div id="wordle-game-wrapper">
-    <h1>TECNO-WORDLE</h1>
-    <div id="game-board"></div>
-    <div id="message"></div>
+    <div id="menu-container">
+    <select id="categoria">
+        <option value="electricidad">Electricidad</option>
+        <option value="dibujo">Dibujo</option>
+        <option value="materiales">Materiales</option>
+    </select>
+	</div>
+	<h1>TECNO-WORDLE</h1>
+	<div id="game-board"></div>
+	<div id="message"></div>
     <button id="submitBtn">SUBMIT</button>
+	<div id="keyboard"></div>
 </div>
 
 <!--Archivo con las palabras para adivinar -->
-<script src="palabras.js"></script>
+<script src="palabras.js"></script> 
 
 <script>
-const palabraSolucion = LISTA_PALABRAS[Math.floor(Math.random() * LISTA_PALABRAS.length)];
+//const palabraSolucion = LISTA_ELECTRICIDAD[Math.floor(Math.random() * LISTA_ELECTRICIDAD.length)];
+
+//const palabraSolucion = "ghost";
+
+let categoriaActual = document.getElementById("categoria").value;
+let palabraSolucion = obtenerPalabraAleatoria(categoriaActual);
+
+function obtenerPalabraAleatoria(categoria) {
+    const lista = LISTAS_PALABRAS[categoria];
+    return lista[Math.floor(Math.random() * lista.length)];
+}
+
+
+
 const maxIntentos = 6;
 const longitud = palabraSolucion.length;
 
@@ -200,7 +268,126 @@ function procesarResultado(intento) {
         messageDisplay.textContent = "";
         actualizarFocoVisual();
     }
+	actualizarTeclado(intento, feedback);
+}
+
+const estadoTeclas = {}; // Guarda el mejor estado de cada letra
+
+function crearTeclado() {
+    const keyboard = document.getElementById("keyboard");
+
+    const filas = [
+        "QWERTYUIOP",
+        "ASDFGHJKL",
+        "ZXCVBNM"
+    ];
+
+    filas.forEach(fila => {
+        const filaDiv = document.createElement("div");
+
+        fila.split("").forEach(letra => {
+            const btn = document.createElement("button");
+            btn.textContent = letra;
+            btn.id = `key-${letra}`;
+
+            btn.addEventListener("click", () => {
+                if (juegoTerminado) return;
+
+                tablero[intentoActual][indiceSeleccionado] = letra;
+
+                if (indiceSeleccionado < longitud - 1) {
+                    indiceSeleccionado++;
+                }
+
+                renderizarFila();
+            });
+
+            filaDiv.appendChild(btn);
+        });
+
+        keyboard.appendChild(filaDiv);
+    });
+
+    // BORRAR
+    const borrar = document.createElement("button");
+    borrar.textContent = "⌫";
+    borrar.addEventListener("click", () => {
+        if (juegoTerminado) return;
+
+        tablero[intentoActual][indiceSeleccionado] = "";
+
+        if (indiceSeleccionado > 0) indiceSeleccionado--;
+
+        renderizarFila();
+    });
+
+    keyboard.appendChild(borrar);
+
+    // ENTER
+    const enter = document.createElement("button");
+    enter.textContent = "ENTER";
+    enter.addEventListener("click", validarYEnviar);
+
+    keyboard.appendChild(enter);
+}
+
+function actualizarTeclado(intento, feedback) {
+    for (let i = 0; i < intento.length; i++) {
+        const letra = intento[i];
+        const estado = feedback[i];
+
+        const key = document.getElementById(`key-${letra}`);
+        if (!key) continue;
+
+        const prioridad = {
+            correct: 3,
+            present: 2,
+            absent: 1
+        };
+
+        // Solo actualiza si el nuevo estado es "mejor"
+        if (
+            !estadoTeclas[letra] ||
+            prioridad[estado] > prioridad[estadoTeclas[letra]]
+        ) {
+            estadoTeclas[letra] = estado;
+
+            key.classList.remove("correct", "present", "absent");
+            key.classList.add(estado);
+        }
+    }
+}
+
+document.getElementById("categoria").addEventListener("change", () => {
+    categoriaActual = document.getElementById("categoria").value;
+    palabraSolucion = obtenerPalabraAleatoria(categoriaActual);
+    reiniciarJuego();
+});
+
+function reiniciarJuego() {
+    intentoActual = 0;
+    indiceSeleccionado = 0;
+    juegoTerminado = false;
+    tablero = Array.from({ length: maxIntentos }, () => Array(longitud).fill(""));
+    messageDisplay.textContent = "";
+
+    // Limpiar tablero visual
+    for (let i = 0; i < maxIntentos; i++) {
+        for (let j = 0; j < longitud; j++) {
+            const tile = document.getElementById(`tile-${i}-${j}`);
+            tile.textContent = "";
+            tile.classList.remove("correct", "present", "absent");
+        }
+    }
+
+    // Reset teclado
+    document.querySelectorAll("#keyboard button").forEach(btn => {
+        btn.classList.remove("correct", "present", "absent");
+    });
+
+    actualizarFocoVisual();
 }
 
 initBoard();
+crearTeclado();
 </script>
